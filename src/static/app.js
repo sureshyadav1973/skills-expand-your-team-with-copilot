@@ -320,7 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .toLowerCase()
       .trim()
       .replaceAll(/[^a-z0-9]+/g, "-")
-      .replaceAll(/^-+|-+$/g, "");
+      .replaceAll(/^-+|-+$/, "");
   }
 
   function getActivityShareData(name, details) {
@@ -330,7 +330,12 @@ document.addEventListener("DOMContentLoaded", () => {
     activityUrl.hash = `activity-${activitySlug}`;
 
     const pageUrl = activityUrl.toString();
-    const message = `Check out "${name}" at ${SCHOOL_NAME}! ${details.description}`;
+    const maxDescriptionLength = 120;
+    const trimmedDescription =
+      details.description.length > maxDescriptionLength
+        ? `${details.description.slice(0, maxDescriptionLength - 1)}…`
+        : details.description;
+    const message = `Check out "${name}" at ${SCHOOL_NAME}. ${trimmedDescription}`;
 
     return {
       pageUrl,
@@ -340,7 +345,7 @@ document.addEventListener("DOMContentLoaded", () => {
       facebookUrl: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
         pageUrl
       )}&quote=${encodeURIComponent(message)}`,
-      xUrl: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      xUrl: `https://x.com/intent/tweet?text=${encodeURIComponent(
         message
       )}&url=${encodeURIComponent(pageUrl)}`,
     };
