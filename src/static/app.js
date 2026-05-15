@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const SCHOOL_NAME = "Mergington High School";
+
   // DOM elements
   const activitiesList = document.getElementById("activities-list");
   const messageDiv = document.getElementById("message");
@@ -304,6 +306,90 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function toActivitySlug(activityName) {
+    return activityName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function hashString(value) {
+    let hash = 0;
+    for (const character of value) {
+      hash = (hash << 5) - hash + character.charCodeAt(0);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+
+  function getActivityAnchorId(activityName) {
+    const slug = toActivitySlug(activityName);
+    return `activity-${slug}-${hashString(activityName)}`;
+  }
+
+  function getActivityShareData(name, details) {
+    const activityAnchorId = getActivityAnchorId(name);
+    const activityUrl = new URL(window.location.href);
+    activityUrl.search = "";
+    activityUrl.hash = activityAnchorId;
+
+    const pageUrl = activityUrl.toString();
+    const maxDescriptionLength = 120;
+    const trimmedDescription =
+      details.description.length > maxDescriptionLength
+        ? `${details.description.slice(0, maxDescriptionLength)}…`
+        : details.description;
+    const message = `Check out "${name}" at ${SCHOOL_NAME}. ${trimmedDescription}`;
+
+    return {
+      pageUrl,
+      whatsappUrl: `https://wa.me/?text=${encodeURIComponent(
+        `${message} ${pageUrl}`
+      )}`,
+      facebookUrl: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+        pageUrl
+      )}&quote=${encodeURIComponent(message)}`,
+      xUrl: `https://x.com/intent/tweet?text=${encodeURIComponent(
+        message
+      )}&url=${encodeURIComponent(pageUrl)}`,
+    };
+  }
+
+  async function copyShareLink(link) {
+    try {
+      await navigator.clipboard.writeText(link);
+      showMessage("Share link copied.", "success");
+    } catch (error) {
+      console.error("Failed to copy share link:", error);
+      const hiddenInput = document.createElement("input");
+      hiddenInput.value = link;
+      hiddenInput.setAttribute("readonly", "");
+      hiddenInput.style.position = "absolute";
+      hiddenInput.style.left = "-9999px";
+      document.body.appendChild(hiddenInput);
+      hiddenInput.select();
+
+      const wasCopied = document.execCommand("copy");
+      document.body.removeChild(hiddenInput);
+
+      if (wasCopied) {
+        showMessage("Share link copied.", "success");
+      } else {
+        showMessage("Could not copy the link. Please copy it manually.", "error");
+      }
+    }
+  }
+
   // Function to determine activity type (this would ideally come from backend)
   function getActivityType(activityName, description) {
     const name = activityName.toLowerCase();
@@ -476,6 +562,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
     activityCard.className = "activity-card";
+    activityCard.id = getActivityAnchorId(name);
 
     // Calculate spots and capacity
     const totalSpots = details.max_participants;
@@ -498,6 +585,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
+    const shareData = getActivityShareData(name, details);
+    const safeName = escapeHtml(name);
+    const safeDescription = escapeHtml(details.description);
+    const safeSchedule = escapeHtml(formattedSchedule);
+    const safeSharePageUrl = escapeHtml(shareData.pageUrl);
+    const safeWhatsAppShareUrl = escapeHtml(shareData.whatsappUrl);
+    const safeFacebookShareUrl = escapeHtml(shareData.facebookUrl);
+    const safeXShareUrl = escapeHtml(shareData.xUrl);
+    const safeActivityValue = escapeHtml(name);
+    const participantsHtml = details.participants
+      .map((email) => {
+        const safeEmail = escapeHtml(email);
+        return `
+            <li>
+              ${safeEmail}
+              ${
+                currentUser
+                  ? `
+                <span class="delete-participant tooltip" data-activity="${safeActivityValue}" data-email="${safeEmail}">
+                  ✖
+                  <span class="tooltip-text">Unregister this student</span>
+                </span>
+              `
+                  : ""
+              }
+            </li>
+          `;
+      })
+      .join("");
 
     // Create activity tag
     const tagHtml = `
@@ -521,44 +637,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     activityCard.innerHTML = `
       ${tagHtml}
-      <h4>${name}</h4>
-      <p>${details.description}</p>
+      <h4>${safeName}</h4>
+      <p>${safeDescription}</p>
       <p class="tooltip">
-        <strong>Schedule:</strong> ${formattedSchedule}
+        <strong>Schedule:</strong> ${safeSchedule}
         <span class="tooltip-text">Regular meetings at this time throughout the semester</span>
       </p>
       ${capacityIndicator}
       <div class="participants-list">
         <h5>Current Participants:</h5>
         <ul>
-          ${details.participants
-            .map(
-              (email) => `
-            <li>
-              ${email}
-              ${
-                currentUser
-                  ? `
-                <span class="delete-participant tooltip" data-activity="${name}" data-email="${email}">
-                  ✖
-                  <span class="tooltip-text">Unregister this student</span>
-                </span>
-              `
-                  : ""
-              }
-            </li>
-          `
-            )
-            .join("")}
+          ${participantsHtml}
         </ul>
       </div>
       <div class="activity-card-actions">
         ${
           currentUser
             ? `
-          <button class="register-button" data-activity="${name}" ${
-                isFull ? "disabled" : ""
-              }>
+          <button class="register-button" data-activity="${safeActivityValue}" ${
+                 isFull ? "disabled" : ""
+               }>
             ${isFull ? "Activity Full" : "Register Student"}
           </button>
         `
@@ -568,6 +666,43 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `
         }
+      </div>
+      <div class="share-actions">
+        <a
+          class="share-button share-whatsapp"
+          href="${safeWhatsAppShareUrl}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${safeName} on WhatsApp"
+        >
+          WhatsApp
+        </a>
+        <a
+          class="share-button share-facebook"
+          href="${safeFacebookShareUrl}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${safeName} on Facebook"
+        >
+          Facebook
+        </a>
+        <a
+          class="share-button share-x"
+          href="${safeXShareUrl}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${safeName} on X"
+        >
+          X
+        </a>
+        <button
+          class="share-button share-copy"
+          type="button"
+          data-share-url="${safeSharePageUrl}"
+          aria-label="Copy share link for ${safeName}"
+        >
+          Copy Link
+        </button>
       </div>
     `;
 
@@ -586,6 +721,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    const copyButton = activityCard.querySelector(".share-copy");
+    copyButton.addEventListener("click", () => {
+      copyShareLink(copyButton.dataset.shareUrl);
+    });
 
     activitiesList.appendChild(activityCard);
   }
