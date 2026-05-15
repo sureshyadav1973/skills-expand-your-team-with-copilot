@@ -55,12 +55,19 @@ document.addEventListener("DOMContentLoaded", () => {
         ? '<span aria-hidden="true">☀️</span><span>Light</span>'
         : '<span aria-hidden="true">🌙</span><span>Dark</span>';
       themeToggleButton.setAttribute("aria-pressed", String(isDarkMode));
+      themeToggleButton.setAttribute(
+        "aria-label",
+        isDarkMode ? "Switch to light mode" : "Switch to dark mode"
+      );
     }
   }
 
   function initializeTheme() {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    const preferredTheme = savedTheme || "light";
+    const prefersDarkMode =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const preferredTheme = savedTheme || (prefersDarkMode ? "dark" : "light");
     applyTheme(preferredTheme);
   }
 
