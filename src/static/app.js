@@ -304,6 +304,34 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  function getActivityShareData(name, details) {
+    const pageUrl = window.location.href;
+    const message = `Check out "${name}" at Mergington High School! ${details.description}`;
+
+    return {
+      pageUrl,
+      whatsappUrl: `https://wa.me/?text=${encodeURIComponent(
+        `${message} ${pageUrl}`
+      )}`,
+      facebookUrl: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+        pageUrl
+      )}&quote=${encodeURIComponent(message)}`,
+      xUrl: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        message
+      )}&url=${encodeURIComponent(pageUrl)}`,
+    };
+  }
+
+  async function copyShareLink(link) {
+    try {
+      await navigator.clipboard.writeText(link);
+      showMessage("Share link copied.", "success");
+    } catch (error) {
+      console.error("Failed to copy share link:", error);
+      showMessage("Could not copy the link. Please copy it manually.", "error");
+    }
+  }
+
   // Function to determine activity type (this would ideally come from backend)
   function getActivityType(activityName, description) {
     const name = activityName.toLowerCase();
@@ -498,6 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
+    const shareData = getActivityShareData(name, details);
 
     // Create activity tag
     const tagHtml = `
@@ -569,6 +598,43 @@ document.addEventListener("DOMContentLoaded", () => {
         `
         }
       </div>
+      <div class="share-actions">
+        <a
+          class="share-button share-whatsapp"
+          href="${shareData.whatsappUrl}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${name} on WhatsApp"
+        >
+          WhatsApp
+        </a>
+        <a
+          class="share-button share-facebook"
+          href="${shareData.facebookUrl}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${name} on Facebook"
+        >
+          Facebook
+        </a>
+        <a
+          class="share-button share-x"
+          href="${shareData.xUrl}"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Share ${name} on X"
+        >
+          X
+        </a>
+        <button
+          class="share-button share-copy"
+          type="button"
+          data-share-url="${shareData.pageUrl}"
+          aria-label="Copy share link for ${name}"
+        >
+          Copy Link
+        </button>
+      </div>
     `;
 
     // Add click handlers for delete buttons
@@ -586,6 +652,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    const copyButton = activityCard.querySelector(".share-copy");
+    copyButton.addEventListener("click", () => {
+      copyShareLink(copyButton.dataset.shareUrl);
+    });
 
     activitiesList.appendChild(activityCard);
   }
