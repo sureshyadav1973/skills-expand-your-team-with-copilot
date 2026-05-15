@@ -319,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return activityName
       .toLowerCase()
       .trim()
-      .replaceAll(/[^a-z0-9]+/g, "-")
+      .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
   }
 
@@ -371,8 +371,22 @@ document.addEventListener("DOMContentLoaded", () => {
       showMessage("Share link copied.", "success");
     } catch (error) {
       console.error("Failed to copy share link:", error);
-      window.prompt("Copy this share link:", link);
-      showMessage("Copy the link from the dialog.", "info");
+      const hiddenInput = document.createElement("input");
+      hiddenInput.value = link;
+      hiddenInput.setAttribute("readonly", "");
+      hiddenInput.style.position = "absolute";
+      hiddenInput.style.left = "-9999px";
+      document.body.appendChild(hiddenInput);
+      hiddenInput.select();
+
+      const wasCopied = document.execCommand("copy");
+      document.body.removeChild(hiddenInput);
+
+      if (wasCopied) {
+        showMessage("Share link copied.", "success");
+      } else {
+        showMessage("Could not copy the link. Please copy it manually.", "error");
+      }
     }
   }
 
