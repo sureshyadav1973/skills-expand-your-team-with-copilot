@@ -21,6 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const displayName = document.getElementById("display-name");
   const logoutButton = document.getElementById("logout-button");
   const themeToggleButton = document.getElementById("theme-toggle");
+  const themeIcon = document.getElementById("theme-icon");
+  const themeLabel = document.getElementById("theme-label");
   const loginModal = document.getElementById("login-modal");
   const loginForm = document.getElementById("login-form");
   const closeLoginModal = document.querySelector(".close-login-modal");
@@ -51,9 +53,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const isDarkMode = theme === "dark";
     document.body.classList.toggle("dark-mode", isDarkMode);
     if (themeToggleButton) {
-      themeToggleButton.innerHTML = isDarkMode
-        ? '<span aria-hidden="true">☀️</span><span>Light</span>'
-        : '<span aria-hidden="true">🌙</span><span>Dark</span>';
+      if (themeIcon) {
+        themeIcon.textContent = isDarkMode ? "☀️" : "🌙";
+      }
+      if (themeLabel) {
+        themeLabel.textContent = isDarkMode ? "Light" : "Dark";
+      }
       themeToggleButton.setAttribute("aria-pressed", String(isDarkMode));
       themeToggleButton.setAttribute(
         "aria-label",
@@ -63,7 +68,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function initializeTheme() {
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    let savedTheme = null;
+    try {
+      savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    } catch (error) {
+      console.warn("Theme preference could not be read from localStorage.", error);
+    }
     const prefersDarkMode =
       window.matchMedia &&
       window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -74,7 +84,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function toggleTheme() {
     const isDarkMode = document.body.classList.contains("dark-mode");
     const nextTheme = isDarkMode ? "light" : "dark";
-    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    } catch (error) {
+      console.warn("Theme preference could not be saved to localStorage.", error);
+    }
     applyTheme(nextTheme);
   }
 
