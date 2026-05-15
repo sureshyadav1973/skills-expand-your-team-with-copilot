@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const SCHOOL_NAME = "Mergington High School";
+
   // DOM elements
   const activitiesList = document.getElementById("activities-list");
   const messageDiv = document.getElementById("message");
@@ -304,9 +306,31 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function toActivitySlug(activityName) {
+    return activityName
+      .toLowerCase()
+      .trim()
+      .replaceAll(/[^a-z0-9]+/g, "-")
+      .replaceAll(/^-+|-+$/g, "");
+  }
+
   function getActivityShareData(name, details) {
-    const pageUrl = window.location.href;
-    const message = `Check out "${name}" at Mergington High School! ${details.description}`;
+    const activitySlug = toActivitySlug(name);
+    const activityUrl = new URL(window.location.href);
+    activityUrl.search = "";
+    activityUrl.hash = `activity-${activitySlug}`;
+
+    const pageUrl = activityUrl.toString();
+    const message = `Check out "${name}" at ${SCHOOL_NAME}! ${details.description}`;
 
     return {
       pageUrl,
@@ -504,6 +528,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
     activityCard.className = "activity-card";
+    const activitySlug = toActivitySlug(name);
+    activityCard.id = `activity-${activitySlug}`;
 
     // Calculate spots and capacity
     const totalSpots = details.max_participants;
@@ -527,6 +553,34 @@ document.addEventListener("DOMContentLoaded", () => {
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
     const shareData = getActivityShareData(name, details);
+    const safeName = escapeHtml(name);
+    const safeDescription = escapeHtml(details.description);
+    const safeSchedule = escapeHtml(formattedSchedule);
+    const safeSharePageUrl = escapeHtml(shareData.pageUrl);
+    const safeWhatsAppShareUrl = escapeHtml(shareData.whatsappUrl);
+    const safeFacebookShareUrl = escapeHtml(shareData.facebookUrl);
+    const safeXShareUrl = escapeHtml(shareData.xUrl);
+    const safeActivityValue = escapeHtml(name);
+    const participantsHtml = details.participants
+      .map((email) => {
+        const safeEmail = escapeHtml(email);
+        return `
+            <li>
+              ${safeEmail}
+              ${
+                currentUser
+                  ? `
+                <span class="delete-participant tooltip" data-activity="${safeActivityValue}" data-email="${safeEmail}">
+                  ✖
+                  <span class="tooltip-text">Unregister this student</span>
+                </span>
+              `
+                  : ""
+              }
+            </li>
+          `;
+      })
+      .join("");
 
     // Create activity tag
     const tagHtml = `
@@ -550,44 +604,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     activityCard.innerHTML = `
       ${tagHtml}
-      <h4>${name}</h4>
-      <p>${details.description}</p>
+      <h4>${safeName}</h4>
+      <p>${safeDescription}</p>
       <p class="tooltip">
-        <strong>Schedule:</strong> ${formattedSchedule}
+        <strong>Schedule:</strong> ${safeSchedule}
         <span class="tooltip-text">Regular meetings at this time throughout the semester</span>
       </p>
       ${capacityIndicator}
       <div class="participants-list">
         <h5>Current Participants:</h5>
         <ul>
-          ${details.participants
-            .map(
-              (email) => `
-            <li>
-              ${email}
-              ${
-                currentUser
-                  ? `
-                <span class="delete-participant tooltip" data-activity="${name}" data-email="${email}">
-                  ✖
-                  <span class="tooltip-text">Unregister this student</span>
-                </span>
-              `
-                  : ""
-              }
-            </li>
-          `
-            )
-            .join("")}
+          ${participantsHtml}
         </ul>
       </div>
       <div class="activity-card-actions">
         ${
           currentUser
             ? `
-          <button class="register-button" data-activity="${name}" ${
-                isFull ? "disabled" : ""
-              }>
+          <button class="register-button" data-activity="${safeActivityValue}" ${
+                 isFull ? "disabled" : ""
+               }>
             ${isFull ? "Activity Full" : "Register Student"}
           </button>
         `
@@ -601,36 +637,36 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="share-actions">
         <a
           class="share-button share-whatsapp"
-          href="${shareData.whatsappUrl}"
+          href="${safeWhatsAppShareUrl}"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Share ${name} on WhatsApp"
+          aria-label="Share ${safeName} on WhatsApp"
         >
           WhatsApp
         </a>
         <a
           class="share-button share-facebook"
-          href="${shareData.facebookUrl}"
+          href="${safeFacebookShareUrl}"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Share ${name} on Facebook"
+          aria-label="Share ${safeName} on Facebook"
         >
           Facebook
         </a>
         <a
           class="share-button share-x"
-          href="${shareData.xUrl}"
+          href="${safeXShareUrl}"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Share ${name} on X"
+          aria-label="Share ${safeName} on X"
         >
           X
         </a>
         <button
           class="share-button share-copy"
           type="button"
-          data-share-url="${shareData.pageUrl}"
-          aria-label="Copy share link for ${name}"
+          data-share-url="${safeSharePageUrl}"
+          aria-label="Copy share link for ${safeName}"
         >
           Copy Link
         </button>
