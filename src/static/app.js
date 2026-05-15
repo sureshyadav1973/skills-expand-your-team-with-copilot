@@ -320,20 +320,34 @@ document.addEventListener("DOMContentLoaded", () => {
       .toLowerCase()
       .trim()
       .replaceAll(/[^a-z0-9]+/g, "-")
-      .replaceAll(/^-+|-+$/, "");
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function hashString(value) {
+    let hash = 0;
+    for (const character of value) {
+      hash = (hash << 5) - hash + character.charCodeAt(0);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+
+  function getActivityAnchorId(activityName) {
+    const slug = toActivitySlug(activityName);
+    return `activity-${slug}-${hashString(activityName)}`;
   }
 
   function getActivityShareData(name, details) {
-    const activitySlug = toActivitySlug(name);
+    const activityAnchorId = getActivityAnchorId(name);
     const activityUrl = new URL(window.location.href);
     activityUrl.search = "";
-    activityUrl.hash = `activity-${activitySlug}`;
+    activityUrl.hash = activityAnchorId;
 
     const pageUrl = activityUrl.toString();
     const maxDescriptionLength = 120;
     const trimmedDescription =
       details.description.length > maxDescriptionLength
-        ? `${details.description.slice(0, maxDescriptionLength - 1)}…`
+        ? `${details.description.slice(0, maxDescriptionLength)}…`
         : details.description;
     const message = `Check out "${name}" at ${SCHOOL_NAME}. ${trimmedDescription}`;
 
@@ -357,7 +371,8 @@ document.addEventListener("DOMContentLoaded", () => {
       showMessage("Share link copied.", "success");
     } catch (error) {
       console.error("Failed to copy share link:", error);
-      showMessage("Could not copy the link. Please copy it manually.", "error");
+      window.prompt("Copy this share link:", link);
+      showMessage("Copy the link from the dialog.", "info");
     }
   }
 
@@ -533,8 +548,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
     activityCard.className = "activity-card";
-    const activitySlug = toActivitySlug(name);
-    activityCard.id = `activity-${activitySlug}`;
+    activityCard.id = getActivityAnchorId(name);
 
     // Calculate spots and capacity
     const totalSpots = details.max_participants;
